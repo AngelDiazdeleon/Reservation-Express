@@ -1,7 +1,6 @@
 #dependecias
 node_modules/
 #build / coverage / logs
-
 dist/
 build/
 coverage/
@@ -10,6 +9,8 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
+# uploads temporales
+uploads/
 
 # env y credenciales
 .env
