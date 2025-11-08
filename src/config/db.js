@@ -1,19 +1,18 @@
 const mongoose = require('mongoose');
-const dotenv = require('dotenv');
-
-dotenv.config();
 
 const connectDB = async () => {
-    try {
-        await mongoose.connect(process.env.MONGO_URI, {
-            useNewUrlParser: true,
-            useUnifiedTopology: true,
-        });
-        console.log('MongoDB connected successfully');
-    } catch (error) {
-        console.error('MongoDB connection failed:', error.message);
-        process.exit(1);
-    }
+  try {
+    const conn = await mongoose.connect(process.env.MONGO_URI, {
+      dbName: process.env.DB_NAME || 'reservationExpress',
+      useNewUrlParser: true,
+      useUnifiedTopology: true
+    });
+    console.log(`MongoDB conectado: ${conn.connection.host}`);
+    return conn;
+  } catch (error) {
+    console.error(`Error: ${error.message}`);
+    process.exit(1);
+  }
 };
 
 module.exports = connectDB;

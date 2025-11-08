@@ -14,4 +14,7 @@ router.get('/:id', controller.getTerraceById);
 router.put('/:id', upload.array('images', 5), controller.updateTerrace);
 router.delete('/:id', controller.deleteTerrace);
 
+// Ruta para publicar/activar la terraza (uso admin recomendado)
+router.patch('/:id/publish', controller.publishTerrace);
+
 module.exports = router;
