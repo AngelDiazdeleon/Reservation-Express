@@ -1,21 +1,17 @@
 const express = require('express');
 const router = express.Router();
-const terraceController = require('../controllers/terraceController');
 const upload = require('../middleware/upload');
+const Terrace = require('../models/Terrace');
+const TerraceController = require('../controllers/terrace.controller');
+const imageService = require('../services/image.service');
 
-// Route to create a new terrace
-router.post('/', upload.single('image'), terraceController.createTerrace);
+const controller = new TerraceController(Terrace, imageService);
 
-// Route to get all terraces
-router.get('/', terraceController.getAllTerraces);
-
-// Route to get a specific terrace by ID
-router.get('/:id', terraceController.getTerraceById);
-
-// Route to update a terrace by ID
-router.put('/:id', upload.single('image'), terraceController.updateTerrace);
-
-// Route to delete a terrace by ID
-router.delete('/:id', terraceController.deleteTerrace);
+// POST multipart/form-data con campo 'images' (hasta 5 archivos)
+router.post('/', upload.array('images', 5), controller.createTerrace);
+router.get('/', controller.getTerraces);
+router.get('/:id', controller.getTerraceById);
+router.put('/:id', upload.array('images', 5), controller.updateTerrace);
+router.delete('/:id', controller.deleteTerrace);
 
 module.exports = router;

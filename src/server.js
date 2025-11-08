@@ -1,41 +1,25 @@
-import 'dotenv/config';
-import express from 'express';
-import mongoose from 'mongoose';
-import morgan from 'morgan';
-import cors from 'cors';
+require('dotenv').config();
+const mongoose = require('mongoose');
+const app = require('./app');
+const imageService = require('./services/image.service');
 
-// Importar rutas
-import authRoutes from './routes/auth.routes.js';
-// Puedes agregar más rutas aquí:
-// import reservationRoutes from './routes/reservation.routes.js';
-// import terraceRoutes from './routes/terrace.routes.js';
+const PORT = process.env.PORT || 4001;
+const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017';
+const DB_NAME = process.env.DB_NAME || 'reservationExpress';
 
-const app = express();
+async function start() {
+  try {
+    await mongoose.connect(MONGO_URI, { dbName: DB_NAME, useNewUrlParser: true, useUnifiedTopology: true });
+    console.log('MongoDB conectado via mongoose:', mongoose.connection.name);
 
-// Middleware
-app.use(cors());
-app.use(express.json());
-app.use(morgan('dev'));
+    imageService.initFromMongooseDb(mongoose.connection.db);
+    console.log('GridFS inicializado');
 
-// Ruta base de prueba
-app.get('/', (req, res) => res.json({ ok: true, name: 'Reservation Express API' }));
-
-// Rutas principales
-app.use('/api/auth', authRoutes);
-// app.use('/api/reservations', reservationRoutes);
-// app.use('/api/terraces', terraceRoutes);
-
-const { PORT = 4000, MONGO_URI } = process.env;
-
-// Conexión a MongoDB
-mongoose.connect(MONGO_URI, { dbName: 'reservationExpress' })
-  .then(() => {
-    console.log('✅ Conectado a MongoDB:', mongoose.connection.name);
-    app.listen(PORT, () => {
-      console.log(`🚀 API corriendo en http://localhost:${PORT}`);
-    });
-  })
-  .catch(err => {
-    console.error('❌ Error al conectar a MongoDB', err);
+    app.listen(PORT, () => console.log(`API corriendo en http://localhost:${PORT} — CORS -> ${process.env.FRONTEND_ORIGIN || 'http://localhost:4000'}`));
+  } catch (err) {
+    console.error('Error arrancando server:', err);
     process.exit(1);
-  });
+  }
+}
+
+start();

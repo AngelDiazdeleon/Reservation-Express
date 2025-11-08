@@ -1,83 +1,102 @@
+const mongoose = require('mongoose');
+
 class TerraceController {
-    constructor(TerraceModel, imageService) {
-        this.TerraceModel = TerraceModel;
-        this.imageService = imageService;
+  constructor(TerraceModel, imageService) {
+    this.Terrace = TerraceModel;
+    this.imageService = imageService;
+    this.createTerrace = this.createTerrace.bind(this);
+    this.getTerraces = this.getTerraces.bind(this);
+    this.getTerraceById = this.getTerraceById.bind(this);
+    this.updateTerrace = this.updateTerrace.bind(this);
+    this.deleteTerrace = this.deleteTerrace.bind(this);
+  }
+
+  async createTerrace(req, res) {
+    try {
+      const { name, description, capacity, location } = req.body;
+      const files = req.files || [];
+
+      const uploaded = await Promise.all(files.map(f => this.imageService.uploadImage(f)));
+      const imageIds = uploaded.map(u => u.fileId);
+
+      const terrace = new this.Terrace({
+        name, description, capacity, location, images: imageIds
+      });
+
+      await terrace.save();
+      res.status(201).json({ success: true, data: terrace });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ success: false, message: 'Error creating terrace', error: err.message });
     }
+  }
 
-    async createTerrace(req, res) {
-        try {
-            const { name, description } = req.body;
-            const images = req.files; // Assuming multiple images are uploaded
-
-            const imageUrls = await Promise.all(images.map(image => this.imageService.uploadImage(image)));
-
-            const newTerrace = new this.TerraceModel({
-                name,
-                description,
-                images: imageUrls
-            });
-
-            await newTerrace.save();
-            res.status(201).json(newTerrace);
-        } catch (error) {
-            res.status(500).json({ message: 'Error creating terrace', error });
-        }
+  async getTerraces(req, res) {
+    try {
+      const terraces = await this.Terrace.find({});
+      res.json({ success: true, data: terraces });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ success: false, message: 'Error fetching terraces', error: err.message });
     }
+  }
 
-    async getTerraces(req, res) {
-        try {
-            const terraces = await this.TerraceModel.find();
-            res.status(200).json(terraces);
-        } catch (error) {
-            res.status(500).json({ message: 'Error fetching terraces', error });
-        }
+  async getTerraceById(req, res) {
+    try {
+      const { id } = req.params;
+      if (!mongoose.Types.ObjectId.isValid(id)) return res.status(400).json({ success: false, message: 'ID inválido' });
+      const terrace = await this.Terrace.findById(id);
+      if (!terrace) return res.status(404).json({ success: false, message: 'Terraza no encontrada' });
+      res.json({ success: true, data: terrace });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ success: false, message: 'Error', error: err.message });
     }
+  }
 
-    async getTerraceById(req, res) {
-        try {
-            const { id } = req.params;
-            const terrace = await this.TerraceModel.findById(id);
-            if (!terrace) {
-                return res.status(404).json({ message: 'Terrace not found' });
-            }
-            res.status(200).json(terrace);
-        } catch (error) {
-            res.status(500).json({ message: 'Error fetching terrace', error });
-        }
+  async updateTerrace(req, res) {
+    try {
+      const { id } = req.params;
+      if (!mongoose.Types.ObjectId.isValid(id)) return res.status(400).json({ success: false, message: 'ID inválido' });
+
+      const updates = req.body || {};
+      const files = req.files || [];
+
+      if (files.length > 0) {
+        const uploaded = await Promise.all(files.map(f => this.imageService.uploadImage(f)));
+        const newImageIds = uploaded.map(u => u.fileId);
+        updates.images = (updates.images && Array.isArray(updates.images)) ? updates.images.concat(newImageIds) : newImageIds;
+      }
+
+      const updated = await this.Terrace.findByIdAndUpdate(id, updates, { new: true, runValidators: true });
+      if (!updated) return res.status(404).json({ success: false, message: 'Terraza no encontrada' });
+      res.json({ success: true, data: updated });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ success: false, message: 'Error updating terrace', error: err.message });
     }
+  }
 
-    async updateTerrace(req, res) {
-        try {
-            const { id } = req.params;
-            const updates = req.body;
-            if (req.files) {
-                const images = req.files;
-                const imageUrls = await Promise.all(images.map(image => this.imageService.uploadImage(image)));
-                updates.images = imageUrls;
-            }
+  async deleteTerrace(req, res) {
+    try {
+      const { id } = req.params;
+      if (!mongoose.Types.ObjectId.isValid(id)) return res.status(400).json({ success: false, message: 'ID inválido' });
 
-            const updatedTerrace = await this.TerraceModel.findByIdAndUpdate(id, updates, { new: true });
-            if (!updatedTerrace) {
-                return res.status(404).json({ message: 'Terrace not found' });
-            }
-            res.status(200).json(updatedTerrace);
-        } catch (error) {
-            res.status(500).json({ message: 'Error updating terrace', error });
-        }
+      const terrace = await this.Terrace.findByIdAndDelete(id);
+      if (!terrace) return res.status(404).json({ success: false, message: 'Terraza no encontrada' });
+
+      if (terrace.images && terrace.images.length) {
+        await Promise.all(terrace.images.map(imgId => {
+          return this.imageService.deleteImage(imgId).catch(() => {});
+        }));
+      }
+
+      res.json({ success: true, message: 'Terraza eliminada' });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ success: false, message: 'Error deleting terrace', error: err.message });
     }
-
-    async deleteTerrace(req, res) {
-        try {
-            const { id } = req.params;
-            const deletedTerrace = await this.TerraceModel.findByIdAndDelete(id);
-            if (!deletedTerrace) {
-                return res.status(404).json({ message: 'Terrace not found' });
-            }
-            res.status(204).send();
-        } catch (error) {
-            res.status(500).json({ message: 'Error deleting terrace', error });
-        }
-    }
+  }
 }
 
-export default TerraceController;
+module.exports = TerraceController;

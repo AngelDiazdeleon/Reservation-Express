@@ -1,56 +1,58 @@
 const mongoose = require('mongoose');
-const Grid = require('gridfs-stream');
-const { MongoClient } = require('mongodb');
+const { GridFSBucket, ObjectId } = require('mongodb');
 const path = require('path');
 const fs = require('fs');
 
-let gfs;
+let bucket = null;
 
-const connectDB = async () => {
-    const client = await MongoClient.connect(process.env.MONGO_URI, {
-        useNewUrlParser: true,
-        useUnifiedTopology: true,
+function initFromMongooseDb(db) {
+  if (!db) throw new Error('Se necesita db de mongoose para inicializar GridFS');
+  bucket = new GridFSBucket(db, { bucketName: 'uploads' });
+  return bucket;
+}
+
+function uploadImage(file) {
+  return new Promise((resolve, reject) => {
+    if (!bucket) return reject(new Error('GridFS bucket no inicializado'));
+    const readStream = fs.createReadStream(file.path);
+    const uploadStream = bucket.openUploadStream(file.filename, { contentType: file.mimetype });
+    readStream
+      .pipe(uploadStream)
+      .on('error', (err) => {
+        try { fs.unlinkSync(file.path); } catch (e) {}
+        reject(err);
+      })
+      .on('finish', () => {
+        try { fs.unlinkSync(file.path); } catch (e) {}
+        resolve({ fileId: uploadStream.id, filename: uploadStream.filename });
+      });
+  });
+}
+
+function getImageStreamById(id) {
+  if (!bucket) throw new Error('GridFS bucket no inicializado');
+  return bucket.openDownloadStream(ObjectId(id));
+}
+
+function getImageStreamByFilename(filename) {
+  if (!bucket) throw new Error('GridFS bucket no inicializado');
+  return bucket.openDownloadStreamByName(filename);
+}
+
+function deleteImage(id) {
+  if (!bucket) throw new Error('GridFS bucket no inicializado');
+  return new Promise((resolve, reject) => {
+    bucket.delete(ObjectId(id), (err) => {
+      if (err) return reject(err);
+      resolve();
     });
-    const db = client.db(process.env.DB_NAME);
-    gfs = Grid(db, mongoose.mongo);
-    gfs.collection('uploads');
-};
-
-const uploadImage = async (file) => {
-    const writestream = gfs.createWriteStream({
-        filename: file.filename,
-        content_type: file.mimetype,
-    });
-
-    fs.createReadStream(file.path).pipe(writestream);
-
-    return new Promise((resolve, reject) => {
-        writestream.on('close', (file) => {
-            fs.unlinkSync(file.path); // Remove the file from the uploads folder
-            resolve(file);
-        });
-
-        writestream.on('error', (err) => {
-            reject(err);
-        });
-    });
-};
-
-const getImage = async (filename) => {
-    return new Promise((resolve, reject) => {
-        gfs.files.findOne({ filename }, (err, file) => {
-            if (!file || file.length === 0) {
-                return reject('No file exists');
-            }
-
-            const readstream = gfs.createReadStream(file.filename);
-            resolve(readstream);
-        });
-    });
-};
+  });
+}
 
 module.exports = {
-    connectDB,
-    uploadImage,
-    getImage,
+  initFromMongooseDb,
+  uploadImage,
+  getImageStreamById,
+  getImageStreamByFilename,
+  deleteImage
 };
