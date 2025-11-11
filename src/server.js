@@ -3,7 +3,7 @@ const app = require('./app');
 const connectDB = require('./config/db');
 const imageService = require('./services/image.service');
 
-const PORT = process.env.PORT || 4001;
+const PORT = process.env.PORT || 4000;
 
 async function startServer() {
   try {
@@ -14,7 +14,6 @@ async function startServer() {
 
     app.listen(PORT, () => {
       console.log(`Servidor corriendo en http://localhost:${PORT}`);
-      console.log(`Frontend origen permitido: ${process.env.FRONTEND_ORIGIN || 'http://localhost:4000'}`);
     });
   } catch (error) {
     console.error('Error iniciando servidor:', error);

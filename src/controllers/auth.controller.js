@@ -1,10 +1,9 @@
-// auth.controller.js
-import User from "../models/User.js";
-import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken";
+const User = require("../models/User.js");
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
 
 // Registro de usuario
-export async function register(req, res) {
+async function register(req, res) {
   try {
     const { name, email, password, role, phone } = req.body;
 
@@ -44,13 +43,13 @@ export async function register(req, res) {
       },
     });
   } catch (e) {
-  console.error("Error en registro:", e); // 👈 imprime el error real
-  res.status(500).json({ message: "Error del servidor" });
+    console.error("Error en registro:", e); 
+    res.status(500).json({ message: "Error del servidor" });
   }
 }
 
 // Login de usuario
-export async function login(req, res) {
+async function login(req, res) {
   try {
     const { email, password } = req.body;
 
@@ -85,7 +84,7 @@ export async function login(req, res) {
 }
 
 // Perfil del usuario autenticado
-export async function profile(req, res) {
+async function profile(req, res) {
   try {
     const user = await User.findById(req.userId).select("_id name email role phone");
     if (!user) return res.status(404).json({ message: "Usuario no encontrado" });
@@ -94,3 +93,9 @@ export async function profile(req, res) {
     res.status(500).json({ message: "Error al obtener el perfil" });
   }
 }
+
+module.exports = {
+  register,
+  login,
+  profile
+};
