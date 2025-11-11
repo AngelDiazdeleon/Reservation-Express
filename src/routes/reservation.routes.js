@@ -1,13 +1,13 @@
-import express from "express";
-import { auth, authRole } from "../middleware/auth.js";
-import {
+const express = require("express");
+const { requireAuth, requireRole } = require("../middleware/auth");
+const {
   createReservation,
   confirmReservation,
-} from "controllers/reservation.controller.js";
+} = require("../controllers/Reservation.controller");
 
 const router = express.Router();
 
-router.post("/", auth, createReservation); // cliente
-router.patch("/:id/confirm", auth, authRole("admin"), confirmReservation); // admin
+router.post("/", requireAuth, createReservation);
+router.patch("/:id/confirm", requireAuth, requireRole("admin"), confirmReservation);
 
-export default router;
+module.exports = router;

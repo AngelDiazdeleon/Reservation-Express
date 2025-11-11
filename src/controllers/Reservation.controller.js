@@ -1,11 +1,19 @@
-import Reservation from "../models/Reservation.js";
+const Reservation = require("../models/Reservation");
 
-export async function createReservation(req, res) {
-  const { terrace, date, timeSlot } = req.body;
-  const client = req.userId;
+exports.createReservation = async function(req, res) {
+  const { terrace, date, timeSlot, guests, totalAmount } = req.body;
+  const client = req.user.id; // ✅ CAMBIAR: req.userId → req.user.id
 
   try {
-    const reservation = new Reservation({ client, terrace, date, timeSlot });
+    const reservation = new Reservation({ 
+      client, 
+      terrace, 
+      date, 
+      timeSlot,
+      guests,
+      totalAmount,
+      commissionAmount: totalAmount * 0.05
+    });
     await reservation.save();
     res.status(201).json({ message: "Reserva creada", reservation });
   } catch (e) {
@@ -13,12 +21,12 @@ export async function createReservation(req, res) {
   }
 }
 
-export async function confirmReservation(req, res) {
+exports.confirmReservation = async function(req, res) {
   const { id } = req.params;
   try {
     const reservation = await Reservation.findByIdAndUpdate(id, {
-      status: "confirmada",
-      paymentStatus: "pagado",
+      status: "confirmed",
+      paymentStatus: "paid",
     }, { new: true });
     res.json({ message: "Reserva confirmada", reservation });
   } catch (e) {

@@ -1,9 +1,12 @@
 const mongoose = require('mongoose');
-
 const fileRefSchema = new mongoose.Schema({
   fileId: { type: mongoose.Schema.Types.ObjectId, required: true },
   filename: { type: String },
-  mimetype: { type: String }
+  mimetype: { type: String },
+  documentType: { 
+    type: String, 
+    enum: ['contract', 'identification', 'certificate', 'other'] 
+  } // ✅ NUEVO - Tipo específico de documento
 }, { _id: false });
 
 const publicationRequestSchema = new mongoose.Schema({

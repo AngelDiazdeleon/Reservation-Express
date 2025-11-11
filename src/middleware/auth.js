@@ -1,4 +1,4 @@
-// auth.js
+// auth.js - SOLO AGREGAMOS, NO QUITAMOS NADA
 const jwt = require('jsonwebtoken');
 
 function requireAuth(req, res, next) {
@@ -7,10 +7,10 @@ function requireAuth(req, res, next) {
   const token = authHeader.split(' ')[1];
   try {
     const payload = jwt.verify(token, process.env.JWT_SECRET);
-    // Normaliza payload: soporta payload.id o payload.sub
+    // ✅ NUEVO: Mejoramos la normalización sin romper lo existente
     req.user = {
-      id: payload.id || payload.sub,
-      role: payload.role || payload.userRole || payload.roleName
+      id: payload.id || payload.sub || payload.userId,
+      role: payload.role || payload.userRole || payload.roleName || 'client'
     };
     return next();
   } catch (err) {
@@ -27,7 +27,26 @@ function requireRole(roleOrArray) {
   };
 }
 
+// ✅ NUEVO: Middleware opcional para desarrollo
+function optionalAuth(req, res, next) {
+  const authHeader = req.headers.authorization || req.headers.Authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) return next();
+  
+  const token = authHeader.split(' ')[1];
+  try {
+    const payload = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = {
+      id: payload.id || payload.sub || payload.userId,
+      role: payload.role || payload.userRole || payload.roleName || 'client'
+    };
+  } catch (err) {
+    // Si el token es inválido, continuamos sin usuario
+  }
+  return next();
+}
+
 module.exports = {
   requireAuth,
-  requireRole
+  requireRole,
+  optionalAuth // ✅ NUEVO: Para rutas que pueden funcionar con o sin auth
 };

@@ -7,6 +7,9 @@ const { requireAuth, requireRole } = require('../middleware/auth');
 
 const controller = new PublicationRequestController(imageService);
 
+// ✅ NUEVO: Ruta para que usuarios vean sus propias solicitudes
+router.get('/my/requests', requireAuth, controller.getMyRequests);
+
 // Owner (host) crea solicitud — formulario multipart:
 // campos: name, description, capacity, price, contact, etc.
 // archivos: photos[] (hasta 5) y documents[] (hasta 5)
@@ -24,7 +27,7 @@ router.post(
 // Admin routes
 router.get('/', requireAuth, requireRole('admin'), controller.list);
 router.get('/:id', requireAuth, requireRole('admin'), controller.getById);
-router.patch('/:id/approve', requireAuth, requireRole('admin'), controller.approve);
+router.patch('/:id/approve', requireAuth, requireRole('admin'), express.json(), controller.approve);
 router.patch('/:id/reject', requireAuth, requireRole('admin'), express.json(), controller.reject);
 
 module.exports = router;
